@@ -1,8 +1,8 @@
 #ifndef COMMANDAHELPER_H
 #define COMMANDAHELPER_H
 
-int tokeniseCommand(char* command, char** tokenArray);
+int tokeniseString(char* string, char** tokenArray, char* delimeter);
 
-void runCommand(char** tokenArray, int tokenCount);
+void runCommand(char** tokenArray, int tokenCount, int inPipe, int outPipe);
 
 #endif

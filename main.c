@@ -13,7 +13,7 @@ int main() {
     char userInput[100];
     char* command;
     char* savePointer;
-    char* tokenArray[100];
+    char* tokenArray[COMLIMIT];
     do
     {
         if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -30,16 +30,46 @@ int main() {
         //Gets the command without the final new line
         command = strtok_r(userInput, NEWLINE, &savePointer);
 
-        int tokenCount = tokeniseCommand(command, tokenArray);
+        //Separates the commands when piping
+        int commandCount = tokeniseString(command, tokenArray, COMDELIM);
 
-        //Handle cd command
-        if(!strcmp(tokenArray[0], "cd") && tokenCount > 1)
-            chdir(tokenArray[1]);
-        else if(strcmp(tokenArray[0], "exit"))
+        int i;
+        int pipes[commandCount * 2];
+        for(i = 0; i < commandCount * 2; i += 2)
         {
-            runCommand(tokenArray, tokenCount);
+            int fd[2];
+            pipe(fd);
+            pipes[i] = fd[0];
+            pipes[i + 1] = fd[1];
         }
-  
+        
+        for(i = 0; i < commandCount; i++)
+        {
+            char* argArray[ARGLIMIT];
+            //Separates the arguments for each command
+            int argCount = tokeniseString(tokenArray[i], argArray, ARGDELIM);
+            //Handle cd command
+            if(!strcmp(argArray[0], "cd") && argCount > 1)
+                chdir(argArray[1]);
+            //Handle commands
+            else if(strcmp(argArray[0], "exit"))
+            {
+                int inPipe;
+                int outPipe;
+                //Set the expected input. On the first command, the input will be stdin
+                if(i == 0)
+                    inPipe = STDIN_FILENO;
+                else
+                    inPipe = pipes[((i - 1) * 2)];
+                
+                //Set the expected output. On the last command, the output will be stdout
+                if(i == commandCount - 1)
+                    outPipe = STDOUT_FILENO;
+                else
+                    outPipe = pipes[(i * 2) + 1];
+                runCommand(argArray, argCount, inPipe, outPipe);
+            }
+        }
     }while(strcmp(command, "exit"));
     return EXIT_SUCCESS;
 }

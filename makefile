@@ -18,7 +18,7 @@ run:
 	./$(EXE)
 
 debug: $(DEPS)
-	$(CC) $(DFLAGS) -o shell main.c $(CFLAGS)
+	$(CC) $(DFLAGS) -o shell main.c commandhelper.c commandhelper.h $(CFLAGS)
 
 clean:
 	rm -f $(OBJS)
