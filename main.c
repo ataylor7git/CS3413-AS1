@@ -35,7 +35,7 @@ int main() {
     char cwd[FILENAME_MAX];
 
     //TODO: Remove magic number
-    char userInput[COMLIMIT];
+    char userInput[100];
     char* command;
     char* savePointer;
     char* tokenArray[COMLIMIT];
