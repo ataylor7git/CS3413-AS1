@@ -8,13 +8,23 @@
 #include <stdbool.h>
 
 bool runExec = true;
+int childPid = 0;
+int savedChildPid = -1;
+int returnCode;
+int savedReturnCode = 0;
 
+//The signal handler. Prints how to start the process again.
+//Saves the current child Pid and return code address to be used
+//when restarting the process. Restarting the process only works
+//without piping (Only works with single commands i.e. ./count)
 void signalHandler(int sigNum)
 {
     if(sigNum == SIGTSTP && runExec)
     {
         printf("\nJob Suspended. Type 'fg' or 'bg' to resume.\n");
         runExec = false;
+        savedChildPid = childPid;
+        savedReturnCode = returnCode;
     }
     signal(SIGTSTP, signalHandler);
 }
@@ -25,7 +35,7 @@ int main() {
     char cwd[FILENAME_MAX];
 
     //TODO: Remove magic number
-    char userInput[100];
+    char userInput[COMLIMIT];
     char* command;
     char* savePointer;
     char* tokenArray[COMLIMIT];
@@ -48,6 +58,7 @@ int main() {
         //Separates the commands when piping
         int commandCount = tokeniseString(command, tokenArray, COMDELIM);
 
+        //Creates the pipes (Pipes get overwritten when using SIGTSTP)
         int i;
         int pipes[commandCount * 2];
         for(i = 0; i < commandCount * 2; i += 2)
@@ -67,13 +78,29 @@ int main() {
             if(!strcmp(argArray[0], "cd") && argCount > 1)
                 chdir(argArray[1]);
             else if(!strcmp(argArray[0], "fg"))
-                runExec = true;
+            {
+                if(savedChildPid != -1)
+                {
+
+                    runExec = true;
+                    kill(savedChildPid, SIGCONT);
+                    waitForPid(savedChildPid, &savedReturnCode);
+                }
+            }
             else if(!strcmp(argArray[0], "bg"))
-                runExec = true;
+            {
+                if(savedChildPid != -1)
+                {
+                    runExec = true;
+                    kill(savedChildPid, SIGCONT);
+                }
+            }
             //Handle commands
             else if(strcmp(argArray[0], "exit"))
             {
-                if(runExec)
+                //Only runs a command when SIGTSTP has not caused runExec to false
+                //And if the savedChildPid is finished or if there is no savedChildPid
+                if(runExec && (kill(savedChildPid, 0) < 0 || savedChildPid == -1))
                 {
                     int inPipe;
                     int outPipe;
@@ -88,7 +115,8 @@ int main() {
                         outPipe = STDOUT_FILENO;
                     else
                         outPipe = pipes[(i * 2) + 1];
-                    runCommand(argArray, argCount, inPipe, outPipe);
+                    runCommand(argArray, argCount, inPipe, outPipe, &childPid, &returnCode);
+                    
                 }
                 else if(i == 0)
                 {
@@ -96,6 +124,7 @@ int main() {
                 }
             }
         }
+        
     }while(strcmp(command, "exit"));
     return EXIT_SUCCESS;
 }

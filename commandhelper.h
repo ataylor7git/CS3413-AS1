@@ -3,6 +3,8 @@
 
 int tokeniseString(char* string, char** tokenArray, char* delimeter);
 
-void runCommand(char** tokenArray, int tokenCount, int inPipe, int outPipe);
+void waitForPid(int childPid, int* returnCode);
+
+void runCommand(char** tokenArray, int tokenCount, int inPipe, int outPipe, int* currentChildPid, int* currentReturnCode);
 
 #endif
