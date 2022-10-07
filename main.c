@@ -4,8 +4,23 @@
 #include <string.h>
 #include <constants.h>
 #include <commandhelper.h>
+#include <signal.h>
+#include <stdbool.h>
+
+bool runExec = true;
+
+void signalHandler(int sigNum)
+{
+    if(sigNum == SIGTSTP && runExec)
+    {
+        printf("\nJob Suspended. Type 'fg' or 'bg' to resume.\n");
+        runExec = false;
+    }
+    signal(SIGTSTP, signalHandler);
+}
 
 int main() {
+    signal(SIGTSTP, signalHandler);
     //Obtain the current directory
     char cwd[FILENAME_MAX];
 
@@ -51,23 +66,34 @@ int main() {
             //Handle cd command
             if(!strcmp(argArray[0], "cd") && argCount > 1)
                 chdir(argArray[1]);
+            else if(!strcmp(argArray[0], "fg"))
+                runExec = true;
+            else if(!strcmp(argArray[0], "bg"))
+                runExec = true;
             //Handle commands
             else if(strcmp(argArray[0], "exit"))
             {
-                int inPipe;
-                int outPipe;
-                //Set the expected input. On the first command, the input will be stdin
-                if(i == 0)
-                    inPipe = STDIN_FILENO;
-                else
-                    inPipe = pipes[((i - 1) * 2)];
-                
-                //Set the expected output. On the last command, the output will be stdout
-                if(i == commandCount - 1)
-                    outPipe = STDOUT_FILENO;
-                else
-                    outPipe = pipes[(i * 2) + 1];
-                runCommand(argArray, argCount, inPipe, outPipe);
+                if(runExec)
+                {
+                    int inPipe;
+                    int outPipe;
+                    //Set the expected input. On the first command, the input will be stdin
+                    if(i == 0)
+                        inPipe = STDIN_FILENO;
+                    else
+                        inPipe = pipes[((i - 1) * 2)];
+                    
+                    //Set the expected output. On the last command, the output will be stdout
+                    if(i == commandCount - 1)
+                        outPipe = STDOUT_FILENO;
+                    else
+                        outPipe = pipes[(i * 2) + 1];
+                    runCommand(argArray, argCount, inPipe, outPipe);
+                }
+                else if(i == 0)
+                {
+                    printf("Not allowed to start new command while you have a job active.\n");
+                }
             }
         }
     }while(strcmp(command, "exit"));

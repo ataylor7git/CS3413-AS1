@@ -42,7 +42,12 @@ void runCommand(char** tokenArray, int tokenCount, int inPipe, int outPipe)
     }
     else
     {
-        waitpid(childPid, &returnCode, 0 | WUNTRACED);
+        int ret = waitpid(childPid, &returnCode, 0 | WUNTRACED);
+        
+        if(ret < 0)
+        {
+            fprintf(stderr, "\nError waiting for child process\n");
+        }
         //Close the pipes when they are not stdin or stdout
         if(inPipe != STDIN_FILENO)
             close(inPipe);

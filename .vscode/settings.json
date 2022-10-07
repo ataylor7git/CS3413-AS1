@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "constants.h": "c",
+        "string.h": "c",
+        "commandhelper.h": "c"
+    }
+}
